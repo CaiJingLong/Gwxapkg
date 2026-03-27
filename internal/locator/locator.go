@@ -14,6 +14,7 @@ import (
 // MiniProgramInfo 存储小程序的基本信息
 type MiniProgramInfo struct {
 	AppID      string
+	AppName    string
 	Version    string
 	UpdateTime time.Time
 	Path       string

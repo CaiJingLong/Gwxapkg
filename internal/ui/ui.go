@@ -98,9 +98,14 @@ func NewSpinner(description string) *progressbar.ProgressBar {
 }
 
 // PrintMiniProgram 美化打印小程序信息
-func PrintMiniProgram(index int, appID, version string, updateTime time.Time, fileCount int, path string) {
-	fmt.Printf("  %s %s\n", cyan.Sprintf("%2d.", index), green.Sprint(appID))
-	dim.Printf("     版本: %s │ 文件: %d │ 更新: %s\n", version, fileCount, updateTime.Format("2006-01-02 15:04"))
+func PrintMiniProgram(index int, appName, appID, version string, updateTime time.Time, fileCount int, path string) {
+	title := appID
+	if appName != "" {
+		title = appName
+	}
+
+	fmt.Printf("  %s %s\n", cyan.Sprintf("%2d.", index), green.Sprint(title))
+	dim.Printf("     AppID: %s │ 版本: %s │ 文件: %d │ 更新: %s\n", appID, version, fileCount, updateTime.Format("2006-01-02 15:04"))
 	dim.Printf("     路径: %s\n\n", path)
 }
 

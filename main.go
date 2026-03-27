@@ -6,7 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/25smoking/Gwxapkg/cmd"
+	appcmd "github.com/25smoking/Gwxapkg/cmd"
+	internalcmd "github.com/25smoking/Gwxapkg/internal/cmd"
 	"github.com/25smoking/Gwxapkg/internal/locator"
 	"github.com/25smoking/Gwxapkg/internal/pack"
 	"github.com/25smoking/Gwxapkg/internal/ui"
@@ -62,6 +63,8 @@ func handleAllCommand(args []string) {
 		return
 	}
 
+	locator.EnrichMiniProgramNames(programs)
+
 	// 查找匹配的 AppID
 	var matched *locator.MiniProgramInfo
 	for _, p := range programs {
@@ -80,8 +83,17 @@ func handleAllCommand(args []string) {
 	ui.Success("找到小程序: %s (版本 %s, %d 个文件)", matched.AppID, matched.Version, len(matched.Files))
 	ui.PrintDivider()
 
+	if *outputDir == "" {
+		derivedOutputDir, err := buildDefaultOutputDir(*appID, matched.AppName, matched.Version)
+		if err != nil {
+			ui.Warning("获取当前工作目录失败，继续使用旧默认输出规则: %v", err)
+		} else {
+			*outputDir = derivedOutputDir
+		}
+	}
+
 	// 使用目录路径而非单个文件
-	cmd.Execute(*appID, matched.Path, *outputDir, ".wxapkg", *restoreDir, *pretty, *noClean, *save, *sensitive, *workspace)
+	appcmd.Execute(*appID, matched.Path, *outputDir, ".wxapkg", *restoreDir, *pretty, *noClean, *save, *sensitive, *workspace)
 
 	ui.PrintDivider()
 	ui.Success("处理完成!")
@@ -104,12 +116,14 @@ func handleScanCommand() {
 		return
 	}
 
+	locator.EnrichMiniProgramNames(programs)
+
 	ui.Success("找到 %d 个小程序", len(programs))
 	ui.PrintDivider()
 	fmt.Println()
 
 	for i, p := range programs {
-		ui.PrintMiniProgram(i+1, p.AppID, p.Version, p.UpdateTime, len(p.Files), p.Path)
+		ui.PrintMiniProgram(i+1, p.AppName, p.AppID, p.Version, p.UpdateTime, len(p.Files), p.Path)
 	}
 
 	ui.PrintDivider()
@@ -172,7 +186,28 @@ func handleDefaultCommand() {
 
 	ui.Info("开始处理小程序: %s", *appID)
 	ui.PrintDivider()
-	cmd.Execute(*appID, *input, *outputDir, *fileExt, *restoreDir, *pretty, *noClean, *save, *sensitive, *workspace)
+
+	if *outputDir == "" {
+		appName := locator.ResolveMiniProgramName(*appID)
+		version := internalcmd.DetectVersionFromInput(*input)
+		derivedOutputDir, err := buildDefaultOutputDir(*appID, appName, version)
+		if err != nil {
+			ui.Warning("获取当前工作目录失败，继续使用旧默认输出规则: %v", err)
+		} else {
+			*outputDir = derivedOutputDir
+		}
+	}
+
+	appcmd.Execute(*appID, *input, *outputDir, *fileExt, *restoreDir, *pretty, *noClean, *save, *sensitive, *workspace)
 	ui.PrintDivider()
 	ui.Success("处理完成!")
+}
+
+func buildDefaultOutputDir(appID string, appName string, version string) (string, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	return internalcmd.BuildDefaultOutputDir(cwd, appID, appName, version), nil
 }
